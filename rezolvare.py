@@ -1,6 +1,5 @@
 import math
 
-# informatii despre un nod din arborele de parcurgere (nu din graful initial)
 class NodParcurgere:
     gr = None  # trebuie setat sa contina instanta problemei
 
@@ -81,12 +80,16 @@ class Graph:  # graful problemei
         self.__class__.compartiment1 = listaInfoFisier[6]
         self.__class__.compartiment2 = listaInfoFisier[7]
         self.__class__.magazie = listaInfoFisier[8]
+        self.__class__.verzeInMagazie = 0
+        self.__class__.capreInMagazie = 0
+        self.__class__.lupiInMagazie = 0
         self.__class__.caprePerLup = listaInfoFisier[9]
         self.__class__.lupiPerLup = listaInfoFisier[10]
         self.__class__.verzePerCapre = listaInfoFisier[11]
         self.__class__.finalVerze = listaInfoFisier[12]
         self.__class__.finalCapre = listaInfoFisier[13]
         self.__class__.finalLupi = listaInfoFisier[14]
+
         self.start = (self.__class__.V, self.__class__.C, self.__class__.L, 1, self.__class__.magazie)  # informatia nodului de start: verze, capre, lupi, malul pe care este barca (1 = dreapta)
 
         # TODO: scopuri sunt toate variantele de "resturi" pe malul initial
@@ -111,7 +114,7 @@ class Graph:  # graful problemei
 
 
         listaSuccesori = []
-        # nodCurent.info va contine un tuplu (v_i, c_i, l_i, barca, magazie)
+        # nodCurent.info va contine un tuplu (v_initial, c_initial, l_initial, barca, v_opus, c_opus, l_opus, v_magazie, c_magazie, l_magazie)
         barca = nodCurent.info[3]
         if barca == 1:
             # mal curent
@@ -153,42 +156,112 @@ class Graph:  # graful problemei
         # TODO: cum influenteaza compartimentul ocupat alegerea pentru max de alt tip
         #  eventual folosim variabile pt a stii daca compartimentele sunt ocupate
         for verzeBarca in range(maxVerzeBarca + 1):
-            if verzeBarca == 0:
+            if verzeBarca == 0 or (comp1 == False and comp2 == False):
                 maxCapreBarca = min(Graph.compartiment1, Graph.compartiment2, capreMalCurent)
                 minCapreBarca = 0
-            else:
-                maxCapreBarca = min(Graph.compartiment1, Graph.compartiment2)
+
+                if maxCapreBarca == Graph.compartiment1:
+                    comp1 = True
+                elif maxCapreBarca == Graph.compartiment2:
+                    comp2 = True
+            elif comp1 == False:
+                maxCapreBarca = min(Graph.compartiment1, capreMalCurent)
                 minCapreBarca = 0
+                comp1 = True
+            else:
+                maxCapreBarca = min(Graph.compartiment2, capreMalCurent)
+                minCapreBarca = 0
+                comp2 = True
+
+
+            if verzeBarca != 0 and capreBarca != 0:
+                if comp1 == False:
+                    comp1 = True
+                if comp2 == False:
+                    comp2 = True
 
             for capreBarca in range(minCapreBarca, maxCapreBarca + 1):
 
                 if capreBarca == 0 and verzeBarca == 0:
                     maxLupiBarca = min(Graph.compartiment1, Graph.compartiment2, lupiMalCurent)
                     minLupiBarca = 0
-                elif :
-                    maxLupiBarca =
+                elif (capreBarca > 0 and verzeBarca == 0) or (capreBarca == 0 and verzeBarca > 0):
+                    if comp1 == False:
+                        maxLupiBarca = min(Graph.compartiment1, lupiMalCurent)
+                        minLupiBarca = 0
+                        comp1 = True
+                    elif comp2 == False:
+                        maxLupiBarca = min(Graph.compartiment2, lupiMalCurent)
+                        minLupiBarca = 0
+                        comp2 = True
                 else:
+                    continue
 
 
                 for lupiBarca in range(minLupiBarca, maxLupiBarca + 1):
                     # consideram mal curent nou ca fiind acelasi mal de pe care a plecat barca
-                    canMalCurentNou = canMalCurent - canBarca
-                    misMalCurentNou = misMalCurent - misBarca
-                    canMalOpusNou = canMalOpus + canBarca
-                    misMalOpusNou = misMalOpus + misBarca
+
+                    verzeMalCurentNou = verzeMalCurent - verzeBarca
+                    verzeMalOpusNou = verzeMalOpus + verzeBarca
+                    capreMalCurentNou = capreMalCurent - capreBarca
+                    capreMalOpusNou = capreMalOpus + capreBarca
+                    lupiMalCurentNou = lupiMalCurent - lupiBarca
+                    lupiMalOpusNou = lupiMalOpus + lupiBarca
 
 
-                    if not test_conditie(misMalCurentNou, canMalCurentNou):
+                    # TODO: variante mal opus cu magazie
+
+
+                    if not test_conditie(verzeMalCurentNou, capreMalCurentNou, lupiMalCurentNou):
                         continue
-                    if not test_conditie(misMalOpusNou, canMalOpusNou):
+                    if not test_conditie(verzeMalOpusNou, capreMalOpusNou, lupiMalOpusNou):
                         continue
+
+                    # nodCurent.info va contine un tuplu (v_initial, c_initial, l_initial, barca, v_opus, c_opus, l_opus, v_magazie, c_magazie, l_magazie)
+
                     if barca == 1:  # testul este pentru barca nodului curent (parinte) deci inainte de mutare
-                        infoNodNou = (canMalCurentNou, misMalCurentNou, 0)
+                        infoNodNou = (verzeMalCurentNou, capreMalCurentNou, lupiMalCurentNou, 0, verzeMalOpusNou, capreMalOpusNou, lupiMalOpusNou) # completat magazie
                     else:
-                        infoNodNou = (canMalOpusNou, misMalOpusNou, 1)
+                        infoNodNou = (verzeMalCurentNou, capreMalCurentNou, lupiMalCurentNou, 0, verzeMalOpusNou, capreMalOpusNou, lupiMalOpusNou) # completat magazie
                     if not nodCurent.contineInDrum(infoNodNou):
-                        costSuccesor = canBarca * 2 + misBarca
-                        listaSuccesori.append(NodParcurgere(infoNodNou, nodCurent, cost=nodCurent.g + costSuccesor,
-                                            h=NodParcurgere.gr.calculeaza_h(infoNodNou, tip_euristica)))
+                        # TODO: calculat cost
+                        #costSuccesor =
+                        #listaSuccesori.append(NodParcurgere(infoNodNou, nodCurent, cost=nodCurent.g + costSuccesor, h=NodParcurgere.gr.calculeaza_h(infoNodNou, tip_euristica)))
 
         return listaSuccesori
+
+
+def a_star(gr, nrSolutiiCautate, tip_euristica):
+    # in coada vom avea doar noduri de tip NodParcurgere (nodurile din arborele de parcurgere)
+    c = [NodParcurgere(gr.start, None, 0, gr.calculeaza_h(gr.start))]
+
+    while len(c) > 0:
+        nodCurent = c.pop(0)
+
+        if gr.testeaza_scop(nodCurent):
+            print("Solutie: ")
+            nodCurent.afisDrum(afisCost=True, afisLung=True)
+            print("\n----------------\n")
+            #input()
+            nrSolutiiCautate -= 1
+            if nrSolutiiCautate == 0:
+                return
+        lSuccesori = gr.genereazaSuccesori(nodCurent, tip_euristica=tip_euristica)
+        for s in lSuccesori:
+            i = 0
+            gasit_loc = False
+            for i in range(len(c)):
+                # diferenta fata de UCS e ca ordonez dupa f
+                if c[i].f >= s.f:
+                    gasit_loc = True
+                    break;
+            if gasit_loc:
+                c.insert(i, s)
+            else:
+                c.append(s)
+
+
+gr = Graph("input.txt")
+NodParcurgere.gr = gr
+nrSolutiiCautate = 3
+a_star(gr, nrSolutiiCautate=3, tip_euristica="euristica nebanala")
