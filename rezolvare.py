@@ -32,8 +32,8 @@ class NodParcurgere:
                 print(
                     # nodCurent.info va contine un tuplu (    0    ,     1    ,     2    ,   3  ,   4   ,    5  ,   6   ,    7     ,    8     ,     9    )
                     # nodCurent.info va contine un tuplu (v_initial, c_initial, l_initial, barca, v_opus, c_opus, l_opus, v_magazie, c_magazie, l_magazie)
-                    ">>> Barca s-a deplasat de la malul {} la malul {} cu {} verze, {} capre, {} lupi".format(mbarca1,
-                    mbarca2, abs(nod.parinte.info[0] - nod.info[0]), abs(nod.info[1] -nod.parinte.info[1]), abs(nod.info[2] - nod.parinte.info[2])))
+                    ">>> Barca s-a deplasat de la malul {} la malul {} cu {} verze, {} capre, {} lupi".format(mbarca1, mbarca2,
+                    abs(nod.parinte.info[0] - nod.info[0]), abs(nod.info[1] - nod.parinte.info[1]), abs(nod.info[2] - nod.parinte.info[2])))
             print(str(nod))
         if afisCost:
             print("Cost: ", self.g)
@@ -66,8 +66,8 @@ class NodParcurgere:
             barcaMalFinal = "<barca>"
 
         return (
-                    "Mal: " + self.gr.malInitial + " Verze: {} Capre: {} Lupi: {} {}  |||  Mal:" + self.gr.malFinal + " Verze: {} Capre: {} Lupi: {} {}").format(
-            self.info[0], self.info[1], self.info[2], barcaMalInitial, self.info[4]+self.info[7], self.info[5]+self.info[8], self.info[6]+self.info[9], barcaMalFinal)
+                    "Mal: " + self.gr.malInitial + " Verze: {} Capre: {} Lupi: {} {}  |||  Mal:" + self.gr.malFinal + " Verze: {} Capre: {} Lupi: {}. In magazie sunt {} verze, {} capre, {} lupi. {}").format(
+            self.info[0], self.info[1], self.info[2], barcaMalInitial, self.info[4], self.info[5], self.info[6], self.info[7], self.info[8], self.info[9],  barcaMalFinal)
 
 
 class Graph:  # graful problemei
@@ -113,7 +113,7 @@ class Graph:  # graful problemei
         return 0
 
 
-    def calculeaza_h(self, infoNod, tip_euristica):
+    def calculeaza_h(self, infoNod, tip_euristica, nodCurent):
         if tip_euristica == "euristica banala":
             if self.testeaza_scop(infoNod):
                 return 1
@@ -121,6 +121,15 @@ class Graph:  # graful problemei
         else:
             # calculez cati oameni mai am de mutat si impart la nr de locuri in barca
             # totalOameniDeMutat=infoNod[0]+infoNod[1]
+            if nodCurent == None:
+                return 0
+
+            if nodCurent.info[0] == infoNod[0] and nodCurent.info[1] == infoNod[1] and nodCurent.info[2] == infoNod[2] and nodCurent.info[4] == infoNod[4] and nodCurent.info[5] == infoNod[5] and nodCurent.info[6] == infoNod[6]:
+                if nodCurent.info[3] == 1:
+                    return 100
+                else:
+                    return 1
+
             return 2 * math.ceil(((self.finalVerze - (infoNod[4] + infoNod[7])) + (self.finalCapre - (infoNod[5] + infoNod[8])) + (self.finalLupi - (infoNod[6] + infoNod[9]))) / (self.compA + self.compB)) + (1 - infoNod[3]) - 1
 
     # functia de generare a succesorilor, facuta la laborator
@@ -131,34 +140,34 @@ class Graph:  # graful problemei
             '''
             if barca == 1:
                 if verzeA == 0 and verzeB == 0 and capreA == 0 and capreB == 0 and lupiA == 0 and lupiB == 0:
-                    return 1000
+                    return 100
                 elif verzeA + verzeB == 0 and capreA + capreB == 0 and lupiA + lupiB > 0:
                     return 0
                 elif verzeA + verzeB == 0 and capreA + capreB > 0 and lupiA + lupiB == 0:
-                    return 700
+                    return 70
                 elif verzeA + verzeB > 0 and capreA + capreB == 0 and lupiA + lupiB == 0:
-                    return 700
+                    return 70
                 elif (verzeA > 0 and verzeB > 0) or (capreA > 0 and capreB > 0) or (lupiA > 0 and lupiB > 0):
-                    return 500
+                    return 50
                 else:
                     return 0
             else:
                 if verzeA == 0 and verzeB == 0 and capreA == 0 and capreB == 0 and lupiA == 0 and lupiB == 0:
                     return 0
                 elif (verzeA > 0 and verzeB > 0) or (capreA > 0 and capreB > 0) or (lupiA > 0 and lupiB > 0):
-                    return 500
+                    return 50
                 elif verzeA + verzeB == 0 and capreA + capreB == 0 and lupiA + lupiB > 0:
-                    return 400
+                    return 40
                 elif verzeA + verzeB == 0 and capreA + capreB > 0 and lupiA + lupiB == 0:
-                    return 700
+                    return 70
                 elif verzeA + verzeB > 0 and capreA + capreB == 0 and lupiA + lupiB == 0:
-                    return 700
+                    return 70
                 else:
-                    return 1000
+                    return 100
             '''
 
 
-            '''
+            #'''
             costSuccesor = 0
             if verzeA == 0 and verzeB == 0 and capreA == 0 and capreB == 0 and lupiA == 0 and lupiB == 0 and barca == 1:
                 return 1000
@@ -166,17 +175,20 @@ class Graph:  # graful problemei
                 return 0
 
             if verzeA and verzeB and barca == 1:
-                return 1000 - verzeA + (verzeB / 2) * 1.5
+                return 100 - verzeA + (verzeB / 2) * 1.5
             elif verzeA and verzeB and barca == 0:
                 return 1000 + verzeA + (verzeB / 2) * 1.5
+
             if capreA and capreB and barca == 1:
                 return 1000 - capreA * 2 + (capreB / 2) * 3
             elif capreA and capreB and barca == 0:
                 return 1000 + capreA * 2 + (capreB / 2) * 3
+
             if lupiA and lupiB and barca == 1:
                 return 1000 - lupiA * 3 + (lupiB / 2) * 4.5
             elif lupiA and lupiB and barca == 0:
                 return 1000 + lupiA * 3 + (lupiB / 2) * 4.5
+
 
             if verzeA:
                 costSuccesor += verzeA
@@ -198,36 +210,80 @@ class Graph:  # graful problemei
             else:
                 return 1000 + costSuccesor
                 
-            '''
+            #'''
 
-        def test_conditie(verzeMC, capreMC, lupiMC, verzeMO, capreMO, lupiMO):
-            if verzeMC - Graph.verzePerCapra * capreMC + verzeMO - Graph.verzePerCapra * capreMO < Graph.finalVerze:
+        def test_conditie(info):
+            #print("-------- " + str(info[0]) + " " + str(info[1]) + " " + str(info[2]) + " " + str(info[4]) + " " + str(info[5]) + " " + str(info[6]) + " " + str(info[7]) + " " + str(info[8]) + " " + str(info[9]))
+            if info[0] < 0 or info[1] < 0 or info[2] < 0 or info[4] < 0 or info[5] < 0 or info[6] < 0:
                 return 0
 
-            if capreMC - Graph.caprePerLup * lupiMC + capreMO - Graph.caprePerLup * lupiMO < Graph.finalCapre:
+            if info[0] + info[4] + info[7] < Graph.finalVerze:
                 return 0
 
-            if capreMC == 0 and lupiMC > 0:
-                # TO DO: functie care sa calculeze lupi ramasi
-                copy = lupiMC
-                lup = 1
-                while lup < copy:
-                    copy -= Graph.lupiPerLup
-                    lup += 1
+            if info[1] + info[5] + info[8] < Graph.finalCapre:
+                return 0
 
-            if capreMO == 0 and lupiMO > 0:
-                # TO DO: functie care sa calculeze lupi ramasi
-                copy2 = lupiMO
-                lup2 = 1
-                while lup2 < copy2:
-                    copy2 -= Graph.lupiPerLup
-                    lup2 += 1
-
-            if copy + copy2 < Graph.finalLupi:
+            if info[2] + info[6] + info[9] < Graph.finalLupi:
                 return 0
 
             return 1
 
+        def mancare(info, mal_nou_taran):
+            #print("\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            #print("-------- " + str(info[0]) + " " + str(info[1]) + " " + str(info[2]) + " " + str(info[4]) + " " + str(info[5]) + " " + str(info[6]) + " " + str(info[7])+ " " + str(info[8])+ " " + str(info[9]) + " ------- " + str(mal_nou_taran))
+            if mal_nou_taran == 1:
+                # calculam valorile pentru malul pe care nu este taranul
+                # vMVN, cMVN, lMVN
+
+                if info[4] - Graph.verzePerCapra * info[5] > 0:
+                    vMVN = info[4] - Graph.verzePerCapra * info[5]
+                else:
+                    vMVN = 0
+
+                if info[5] - Graph.caprePerLup * info[6] > 0:
+                    cMVN = info[5] - Graph.caprePerLup * info[6]
+                else:
+                    cMVN = 0
+
+                lMVN = info[6]
+
+                if cMVN == 0 and info[6] > 0:
+                    # TO DO: functie care sa calculeze lupi ramasi
+                    copy2 = info[6]
+                    lup2 = 1
+                    while lup2 < copy2:
+                        copy2 -= Graph.lupiPerLup
+                        lup2 += 1
+
+                    lMVN = copy2
+                #print(str(info[0]) + " " + str(info[1]) + " " + str(info[2]) + " " + str(vMVN) + " " + str(cMVN) + " " + str(lMVN) + " " + str(info[7]) + " " + str(info[8]) + " " + str(info[9]))
+                return (info[0], info[1], info[2], 1, vMVN, cMVN, lMVN, info[7], info[8], info[9])
+            else:
+                # calculam valorile pentru malul pe care nu este taranul
+                # vMEN, cMEN, lMEN
+                if info[0] - Graph.verzePerCapra * info[1] > 0:
+                    vMEN = info[0] - Graph.verzePerCapra * info[1]
+                else:
+                    vMEN = 0
+
+                if info[1] - Graph.caprePerLup * info[2] > 0:
+                    cMEN = info[1] - Graph.caprePerLup * info[2]
+                else:
+                    cMEN = 0
+
+                lMEN = info[2]
+                if cMEN == 0 and info[2] > 0:
+                    # TO DO: functie care sa calculeze lupi ramasi
+                    copy2 = info[6]
+                    lup2 = 1
+                    while lup2 < copy2:
+                        copy2 -= Graph.lupiPerLup
+                        lup2 += 1
+
+                    lMEN = copy2
+                #print(str(vMEN) + " " + str(cMEN) + " " + str(lMEN) + " " + str(info[4]) + " " + str(
+                    #info[5]) + " " + str(info[6]) + " " + str(info[7]) + " " + str(info[8]) + " " + str(info[9]))
+                return (vMEN, cMEN, lMEN, 0, info[4], info[5], info[6], info[7], info[8], info[9])
 
         def genereaza_combinatii_magazie(verzeA, verzeB, capreA, capreB, lupiA, lupiB, nodCurent, tip_euristica):
             '''
@@ -274,14 +330,21 @@ class Graph:  # graful problemei
                             lupiMalVestNou = (nodCurent.info[6] + lupiA + lupiB + nodCurent.info[9]) - nr_l
 
                             # nodCurent.info va contine un tuplu (v_initial, c_initial, l_initial, barca, v_opus, c_opus, l_opus, v_magazie, c_magazie, l_magazie)
-                            infoNodNou = (verzeMEstNou, capreMEstNou, lupiMEstNou, 0, verzeMalVestNou, capreMalVestNou, lupiMalVestNou, nr_v, nr_c, nr_l)
+                            info_inainte_de_mancare = (verzeMEstNou, capreMEstNou, lupiMEstNou, 0, verzeMalVestNou, capreMalVestNou, lupiMalVestNou, nr_v, nr_c, nr_l)
+
+                            #print("--------")
+                            #print(info_inainte_de_mancare)
+                            #infoNodNou = (verzeMEstNou, capreMEstNou, lupiMEstNou, 0, verzeMalVestNou, capreMalVestNou, lupiMalVestNou, nr_v, nr_c, nr_l)
+                            infoNodNou = mancare(info_inainte_de_mancare, 0)
+
                             #print(infoNodNou)
-                            #if not test_conditie():
-                                #continue
+                            if not test_conditie(infoNodNou):
+                                continue
+
 
                             costSuccesor = get_costSucc(verzeA, capreA, lupiA, verzeB, capreB, lupiB, nodCurent.info[3])
-                            #print("cost = " + str(costSuccesor))
-                            listaSuccesori.append(NodParcurgere(infoNodNou, nodCurent, cost=nodCurent.g + costSuccesor, h=NodParcurgere.gr.calculeaza_h(infoNodNou, tip_euristica)))
+                            #print(infoNodNou)
+                            listaSuccesori.append(NodParcurgere(infoNodNou, nodCurent, cost=nodCurent.g + costSuccesor, h=NodParcurgere.gr.calculeaza_h(infoNodNou, tip_euristica, nodCurent)))
 
             else:
                 verzeMEstNou = nodCurent.info[0] + (verzeA + verzeB)
@@ -325,15 +388,20 @@ class Graph:  # graful problemei
                             capreMalVestNou = nodCurent.info[5] - (capreA+capreB-nr_c)
                             lupiMalVestNou = nodCurent.info[6] - (lupiA+lupiB-nr_l)
 
-                            infoNodNou = (verzeMEstNou, capreMEstNou, lupiMEstNou, 1, verzeMalVestNou, capreMalVestNou,
-                                          lupiMalVestNou, nodCurent.info[7] - nr_v, nodCurent.info[8] - nr_c, nodCurent.info[9] - nr_l)
+                            info_inainte_de_mancare = (verzeMEstNou, capreMEstNou, lupiMEstNou, 1, verzeMalVestNou, capreMalVestNou,lupiMalVestNou, nodCurent.info[7] - nr_v, nodCurent.info[8] - nr_c, nodCurent.info[9] - nr_l)
+                            #print("--------")
+                            #print(info_inainte_de_mancare)
+                            #infoNodNou = (verzeMEstNou, capreMEstNou, lupiMEstNou, 1, verzeMalVestNou, capreMalVestNou, lupiMalVestNou, nodCurent.info[7] - nr_v, nodCurent.info[8] - nr_c,nodCurent.info[9] - nr_l)
+                            infoNodNou = mancare(info_inainte_de_mancare, 1)
+
                             #print(infoNodNou)
-                            #if not test_conditie(infoNodNou):
-                             #   continue
+                            if not test_conditie(infoNodNou):
+                                continue
+
 
                             costSuccesor = get_costSucc(verzeA, capreA, lupiA, verzeB, capreB, lupiB, nodCurent.info[3])
-                            #print("cost = " + str(costSuccesor))
-                            listaSuccesori.append(NodParcurgere(infoNodNou, nodCurent, cost=nodCurent.g + costSuccesor, h=NodParcurgere.gr.calculeaza_h(infoNodNou, tip_euristica)))
+                            #print(infoNodNou)
+                            listaSuccesori.append(NodParcurgere(infoNodNou, nodCurent, cost=nodCurent.g + costSuccesor, h=NodParcurgere.gr.calculeaza_h(infoNodNou, tip_euristica, nodCurent)))
 
         # functia principala
         listaSuccesori = []
@@ -415,7 +483,7 @@ class Graph:  # graful problemei
 
                     #print(listaSuccesori)
 
-        print(nodCurent.info)
+        #print(nodCurent.info)
         #print(listaSuccesori)
         return listaSuccesori
 
@@ -424,16 +492,19 @@ class Graph:  # graful problemei
 
 def a_star(gr, nrSolutiiCautate, tip_euristica):
     # in coada vom avea doar noduri de tip NodParcurgere (nodurile din arborele de parcurgere)
-    c = [NodParcurgere(gr.start, None, 0, gr.calculeaza_h(gr.start, tip_euristica))]
+    c = [NodParcurgere(gr.start, None, 0, gr.calculeaza_h(gr.start, tip_euristica, None))]
 
     verif = 0
     while len(c) > 0:
         nodCurent = c.pop(0)
+
         print("aaa")
         print(nodCurent.info)
         print("aaa")
+        '''
         print(gr.testeaza_scop(nodCurent.info))
         print("aaa")
+        '''
         if gr.testeaza_scop(nodCurent.info):
             print("Solutie: ")
             nodCurent.afisDrum(afisCost=True, afisLung=True)
@@ -443,9 +514,11 @@ def a_star(gr, nrSolutiiCautate, tip_euristica):
             if nrSolutiiCautate == 0:
                 return
         lSuccesori = gr.genereazaSuccesori(nodCurent, tip_euristica=tip_euristica)
+        '''
         print("bbb")
         print(lSuccesori)
         print("bbb")
+        '''
         for s in lSuccesori:
             i = 0
             gasit_loc = False
@@ -458,7 +531,7 @@ def a_star(gr, nrSolutiiCautate, tip_euristica):
                 c.insert(i, s)
             else:
                 c.append(s)
-        print(c)
+        #print(c)
         '''
         if verif < 50:
             verif += 1
@@ -468,7 +541,7 @@ def a_star(gr, nrSolutiiCautate, tip_euristica):
 
 
 gr = Graph("input2.txt")
-#gr.genereazaSuccesori(NodParcurgere((17, 6, 2, 1, 3, 4, 0, 0, 0, 0), None, 0, gr.calculeaza_h(gr.start)), tip_euristica="euristica banala")
+#gr.genereazaSuccesori(NodParcurgere((15, 1, 2, 0, 0, 7, 0, 0, 0, 0), None, 0, 0), tip_euristica="euristica banala")
 #print(gr.testeaza_scop(((17, 6, 2, 1, 3, 4, 1, 0, 0, 0))))
 '''
 print(gr.V)
