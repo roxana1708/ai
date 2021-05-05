@@ -1,17 +1,22 @@
-import time
 import copy
+import time
 
-import pygame, sys
+import pygame
+import sys
 
+import statistics
+# adancimea pt incepator, se schimba in functie de inputul utilizatorului
 ADANCIME_MAX = 2
 
 
-def elem_identice(lista):
-    if (len(set(lista)) == 1):
-        return lista[0] if lista[0] != Joc.GOL else False
+
+def margine(x):
+    if x == 0 or x == 6:
+        return True
+
     return False
 
-
+# verificam daca mai avem "patratele" libere
 def full_board(lista, jucator):
     for i in lista:
         if i == Joc.GOL:
@@ -19,6 +24,7 @@ def full_board(lista, jucator):
 
     return jucator
 
+# verificam daca dreptunghiul selectat nu acopera patratele deja ocupate
 def verif_liber(lista, l_st, c_st, l_dr, c_dr):
     # verificam daca dreptunghiul selectat este ocupat sau nu
     for i in range(l_st, l_dr+1):
@@ -27,6 +33,27 @@ def verif_liber(lista, l_st, c_st, l_dr, c_dr):
                 return False
     return True
 
+def verif_conectate(lista, l_st, c_st, l_dr, c_dr, jucator):
+    for i in range(l_st, l_dr + 1):
+        for j in range(c_st, c_dr + 1):
+            if i-1 >= 0:
+                if lista[(i-1)*7+j] == jucator:
+                    return True
+            if i+1 <= 6:
+                if lista[(i+1)*7+j] == jucator:
+                    return True
+            if j-1 >= 0:
+                if lista[i*7+(j-1)] == jucator:
+                    return True
+            if j+1 <= 6:
+                if lista[i*7+(j+1)] == jucator:
+                    return True
+    return False
+
+#print(verif_conectate(['x', 'x','x','x','*', '#', '#', '#', '*', '#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','#','x', 'x', 'x','x','#','#','*','x','x','x','x','0','0','0','x','x','x','x',], 4, 0, 5, 1, '0'))
+
+# verificam conditia ca dupa o mutare restul patratelelor libere sa fie conectate
+# un fel de dfs
 def connected(lista):
     directions = [1, -1, -7, 7]
     to_visit = []
@@ -77,11 +104,12 @@ class Joc:
     NR_COLOANE = 7
     JMIN = None
     JMAX = None
-    GOL = '#'
+    GOL = '#' #patratica libera
     OTR = '*' #patratica otravita
 
     @classmethod
     def initializeaza(cls, display, NR_COLOANE = 7, dim_celula = 100):
+        # pentru interfata grafica
         cls.display = display
         cls.dim_celula = dim_celula
         cls.x_img = pygame.image.load('ics.png')
@@ -96,19 +124,18 @@ class Joc:
                 patr = pygame.Rect(coloana * (dim_celula + 1), linie * (dim_celula + 1), dim_celula, dim_celula)
                 cls.celuleGrid.append(patr)
 
-    def deseneaza_grid(self, marcaj=None):  # tabla de exemplu este ["#","x","#","0",......]
-
+    def deseneaza_grid(self, marcaj=None):
+        # pentru interfata grafica
         for ind in range(len(self.matr)):
-            linie = ind // 7  # // inseamna div
+            linie = ind // 7
             coloana = ind % 7
 
             if marcaj == ind:
-                # daca am o patratica selectata, o desenez cu rosu
                 culoare = (255, 0, 0)
             else:
                 # altfel o desenez cu alb
                 culoare = (255, 255, 255)
-            pygame.draw.rect(self.__class__.display, culoare, self.__class__.celuleGrid[ind])  # alb = (255,255,255)
+            pygame.draw.rect(self.__class__.display, culoare, self.__class__.celuleGrid[ind])
             if self.matr[ind] == '*':
                 self.__class__.display.blit(self.__class__.otrava_img, (
                 coloana * (self.__class__.dim_celula + 1), linie * (self.__class__.dim_celula + 1)))
@@ -119,12 +146,12 @@ class Joc:
                 self.__class__.display.blit(self.__class__.zero_img, (
                 coloana * (self.__class__.dim_celula + 1), linie * (self.__class__.dim_celula + 1)))
 
-        pygame.display.flip()  # obligatoriu pentru a actualiza interfata (desenul)
-
-    # pygame.display.update()
+        #  pentru a actualiza interfata
+        pygame.display.flip()
 
     def __init__(self, tabla=None):  # Joc()
         self.matr = tabla or [Joc.GOL] * self.NR_COLOANE ** 2
+        # patratelele otravite sunt aceleasi
         self.matr[4] = '*'
         self.matr[8] = '*'
         self.matr[26] = '*'
@@ -133,11 +160,12 @@ class Joc:
 
     @classmethod
     def jucator_opus(cls, jucator):
-        # val_true if conditie else val_false
+        # schimbam jucatorul cand celalalt a terminat de mutat
         return cls.JMAX if jucator == cls.JMIN else cls.JMIN
 
-    # TO DO 5
+
     def final(self, jucator):
+        # jocul nu se termina pana cand tabla nu este acoperita complet (inafara de patratelele otravite)
         rez = full_board(self.matr, self.jucator_opus(jucator))
 
         if rez:
@@ -145,10 +173,14 @@ class Joc:
         else:
             return False
 
-    # TO DO 3,6
-    def mutari(self, jucator):  # jucator = simbolul jucatorului care muta
+
+    def mutari(self, jucator):
+        # generare mutari pentru vaarianta generalizata
+        # functia ia fiecare patratica libera si formeaza toate dreptunghiurile pentru care aceasta poate reprezenta coltul stanga sus
         l_mutari = []
-        #generare mutari pentru vaarianta generalizata
+
+        #if self.matr.count(Joc.JMAX) == 0:
+
         for i in range(len(self.matr)):
             min_linie_colt_dr_jos = i / 7
             min_coloana_colt_dr_jos = i % 7
@@ -160,32 +192,50 @@ class Joc:
                     copie_matr = copy.deepcopy(self.matr)
                     #print(str(int(i / 7)) + " " + str(i % 7) + " " + str(linie) + " " + str(coloana))
 
-                    if verif_liber(copie_matr, int(i/7), i%7, linie, coloana):
-                        #print("here libera")
-                        #print(str(int(i/7)) + " " + str(i%7) + " " + str(linie) + " " + str(coloana))
-                        #print(copie_matr)
-                        #print(copie_matr)
-                        for x in range(int(i/7), linie+1):
-                            for y in range(i%7, coloana+1):
-                                copie_matr[x*7+y] = jucator
-                        #print(copie_matr)
-                        if connected(copie_matr):
-                            #print("here valida")
-                            l_mutari.append(Joc(copie_matr))
-                    #else:
-                        #break
+                    if self.matr.count(jucator) == 0:
+                        if (margine(int(i/7)) or margine(i%7) or margine(linie) or margine(coloana)) \
+                                and verif_liber(copie_matr, int(i/7), i%7, linie, coloana):
+                            # print("here libera")
+                            # print(str(int(i/7)) + " " + str(i%7) + " " + str(linie) + " " + str(coloana))
+                            # print(copie_matr)
+                            # print(copie_matr)
+                            for x in range(int(i / 7), linie + 1):
+                                for y in range(i % 7, coloana + 1):
+                                    copie_matr[x * 7 + y] = jucator
+                            # print(copie_matr)
+
+                            # verificam daca mutarea este valida (adica daca patratelele ramase libere sunt conectate
+                            if connected(copie_matr):
+                                # print("here valida")
+                                l_mutari.append(Joc(copie_matr))
+                    else:
+                        if ((margine(int(i/7)) or margine(i%7) or margine(linie) or margine(coloana)) or verif_conectate(copie_matr, int(i/7), i%7, linie, coloana, jucator)) and verif_liber(copie_matr, int(i/7), i%7, linie, coloana):
+                            #print("here libera")
+                            #print(str(int(i/7)) + " " + str(i%7) + " " + str(linie) + " " + str(coloana))
+                            #print(copie_matr)
+                            #print(copie_matr)
+                            for x in range(int(i/7), linie+1):
+                                for y in range(i%7, coloana+1):
+                                    copie_matr[x*7+y] = jucator
+                            #print(copie_matr)
+
+                            # verificam daca mutarea este valida (adica daca patratelele ramase libere sunt conectate
+                            if connected(copie_matr):
+                                #print("here valida")
+                                l_mutari.append(Joc(copie_matr))
         #print(l_mutari)
         return l_mutari
 
-    # TO DO 7
+
     # estimare scor in functie de numarul de patratele libere
     def estimeaza_scor(self, adancime, j_curent):
         t_final = self.final(j_curent)
-        # if (adancime==0):
-        if t_final == self.__class__.JMAX:  # self.__class__ referinta catre clasa instantei
+        # daca suntem intr-o stare finala intoarcem o valoare in functie de jucatorul castigator
+        if t_final == self.__class__.JMAX:
             return 99 + adancime
         elif t_final == self.__class__.JMIN:
             return -99 - adancime
+        # altfel ne uitam sa vedem cate patratele mai putem acoperi
         elif j_curent == self.__class__.JMAX:
             return self.matr.count(Joc.GOL)
         else:
@@ -194,15 +244,37 @@ class Joc:
     # estimare scor in functie de numarul de patratele ocupate
     def estimeaza_scor_2(self, adancime, j_curent):
         t_final = self.final(j_curent)
-        # if (adancime==0):
-        if t_final == self.__class__.JMAX:  # self.__class__ referinta catre clasa instantei
+        # daca suntem intr-o stare finala intoarcem o valoare in functie de jucatorul castigator
+        if t_final == self.__class__.JMAX:
             return 99 + adancime
         elif t_final == self.__class__.JMIN:
             return -99 - adancime
+        # altfel ne uitam sa vedem cate patratele am reusit sa ocupam
+        # cu cat mai multe patratele acoperite de calculator cu atat mai putine sanse are utilizatorul sa ocupe si astfel sa ramana fara mutari
         elif j_curent == self.__class__.JMAX:
             return self.matr.count(self.__class__.JMAX)
         else:
             return -self.matr.count(self.__class__.JMIN)
+
+    def estimeaza_scor_3(self, j_curent):
+        t_final = self.final(j_curent)
+        # daca suntem intr-o stare finala intoarcem o valoare in functie de jucatorul castigator
+        if t_final == self.__class__.JMAX:
+            return 99
+        elif t_final == self.__class__.JMIN:
+            return -99
+        else:
+            if j_curent == 'x':
+                if self.matr.count('#') % 2 == 0:
+                    return -self.matr.count('#')
+                else:
+                    return self.matr.count('#')
+            else:
+                if self.matr.count('#') % 2 == 0:
+                    return self.matr.count('#')
+                else:
+                    return -self.matr.count('#')
+
 
 
 
@@ -211,10 +283,9 @@ class Joc:
         sir = "  |"
         sir += " ".join([str(i) for i in range(self.NR_COLOANE)]) + "\n"
         sir += "-" * (self.NR_COLOANE + 1) * 2 + "\n"
-        for i in range(self.NR_COLOANE):  # itereaza prin linii
+        for i in range(self.NR_COLOANE):
             sir += str(i) + " |" + " ".join(
                 [str(x) for x in self.matr[self.NR_COLOANE * i: self.NR_COLOANE * (i + 1)]]) + "\n"
-        # [0,1,2,3,4,5,6,7,8]
         return sir
 
     def __str__(self):
@@ -238,25 +309,16 @@ class Stare:
         self.tabla_joc = tabla_joc
         self.j_curent = j_curent
 
-        # adancimea in arborele de stari
         self.adancime = adancime
-
-        # estimarea favorabilitatii starii (daca e finala) sau al celei mai bune stari-fiice (pentru jucatorul curent)
         self.estimare = estimare
-
-        # lista de mutari posibile (tot de tip Stare) din starea curenta
         self.mutari_posibile = []
-
-        # cea mai buna mutare din lista de mutari posibile pentru jucatorul curent
-        # e de tip Stare (cel mai bun succesor)
         self.stare_aleasa = None
 
     def mutari(self):
-        l_mutari = self.tabla_joc.mutari(self.j_curent)  # lista de informatii din nodurile succesoare
+        l_mutari = self.tabla_joc.mutari(self.j_curent)
         #print(l_mutari)
         juc_opus = Joc.jucator_opus(self.j_curent)
 
-        # mai jos calculam lista de noduri-fii (succesori)
         l_stari_mutari = [Stare(mutare, juc_opus, self.adancime - 1, parinte=self) for mutare in l_mutari]
 
         return l_stari_mutari
@@ -266,11 +328,9 @@ class Stare:
         return sir
 
 
-""" Algoritmul MinMax """
-
 
 def min_max(stare):
-    # daca sunt la o frunza in arborele minimax sau la o stare finala
+    # daca suntem la o frunza in arborele minimax sau la o stare finala
     #print("cccc")
     #print(stare.tabla_joc.final)
     if stare.adancime == 0 or stare.tabla_joc.final(stare.j_curent):
@@ -282,14 +342,11 @@ def min_max(stare):
     #print(stare.mutari_posibile)
 
     # aplic algoritmul minimax pe toate mutarile posibile (calculand astfel subarborii lor)
-    mutariCuEstimare = [min_max(x) for x in
-                        stare.mutari_posibile]  # expandez(constr subarb) fiecare nod x din mutari posibile
+    mutariCuEstimare = [min_max(x) for x in stare.mutari_posibile]
 
     if stare.j_curent == Joc.JMAX:
-        # daca jucatorul e JMAX aleg starea-fiica cu estimarea maxima
         stare.stare_aleasa = max(mutariCuEstimare, key=lambda x: x.estimare)  # def f(x): return x.estimare -----> key=f
     else:
-        # daca jucatorul e JMIN aleg starea-fiica cu estimarea minima
         stare.stare_aleasa = min(mutariCuEstimare, key=lambda x: x.estimare)
 
     stare.estimare = stare.stare_aleasa.estimare
@@ -297,84 +354,228 @@ def min_max(stare):
     return stare
 
 
-def alpha_beta(alpha, beta, stare):
+
+def alpha_beta(alpha, beta, stare, nr_noduri):
+    print(nr_noduri)
     if stare.adancime == 0 or stare.tabla_joc.final(stare.j_curent):
-        stare.estimare = stare.tabla_joc.estimeaza_scor(stare.adancime, stare.j_curent)
-        return stare
+        stare.estimare = stare.tabla_joc.estimeaza_scor_3(stare.j_curent) #stare.adancime
+        return stare, nr_noduri
 
     if alpha > beta:
-        return stare  # este intr-un interval invalid deci nu o mai procesez
+        return stare, nr_noduri
 
     stare.mutari_posibile = stare.mutari()
+    if len(stare.mutari_posibile) == 0:
+        print(stare.tabla_joc)
 
     if stare.j_curent == Joc.JMAX:
-        estimare_curenta = float('-inf')  # in aceasta variabila calculam maximul
+        estimare_curenta = float('-inf')
 
         for mutare in stare.mutari_posibile:
             # calculeaza estimarea pentru starea noua, realizand subarborele
-            stare_noua = alpha_beta(alpha, beta, mutare)  # aici construim subarborele pentru stare_noua
+            nr_noduri += 1
+            stare_noua, nr_noduri = alpha_beta(alpha, beta, mutare, nr_noduri)
 
-            if (estimare_curenta < stare_noua.estimare):
+            if estimare_curenta < stare_noua.estimare:
                 stare.stare_aleasa = stare_noua
                 estimare_curenta = stare_noua.estimare
-            if (alpha < stare_noua.estimare):
+            if alpha < stare_noua.estimare:
                 alpha = stare_noua.estimare
                 if alpha >= beta:
                     break
 
     elif stare.j_curent == Joc.JMIN:
         estimare_curenta = float('inf')
-        # completati cu rationament similar pe cazul stare.j_curent==Joc.JMAX
-        for mutare in stare.mutari_posibile:
-            # calculeaza estimarea
-            stare_noua = alpha_beta(alpha, beta, mutare)  # aici construim subarborele pentru stare_noua
 
-            if (estimare_curenta > stare_noua.estimare):
+        for mutare in stare.mutari_posibile:
+            nr_noduri += 1
+            stare_noua, nr_noduri = alpha_beta(alpha, beta, mutare, nr_noduri)
+
+            if estimare_curenta > stare_noua.estimare:
                 stare.stare_aleasa = stare_noua
                 estimare_curenta = stare_noua.estimare
-            if (beta > stare_noua.estimare):
+            if beta > stare_noua.estimare:
                 beta = stare_noua.estimare
                 if alpha >= beta:
                     break
 
-    stare.estimare = stare.stare_aleasa.estimare
+    if stare.stare_aleasa == None:
+        print("A castigat ", Joc.JMIN)
+        return
+    else:
+        stare.estimare = stare.stare_aleasa.estimare
+        return stare, nr_noduri
 
-    return stare
+
+class Buton:
+    def __init__(self, display=None, left=0, top=0, w=0, h=0,culoareFundal=(53,80,115), culoareFundalSel=(89,134,194), text="", font="arial", fontDimensiune=16, culoareText=(255,255,255), valoare=""):
+        self.display=display
+        self.culoareFundal=culoareFundal
+        self.culoareFundalSel=culoareFundalSel
+        self.text=text
+        self.font=font
+        self.w=w
+        self.h=h
+        self.selectat=False
+        self.fontDimensiune=fontDimensiune
+        self.culoareText=culoareText
+
+        fontObj = pygame.font.SysFont(self.font, self.fontDimensiune)
+        self.textRandat=fontObj.render(self.text, True , self.culoareText)
+        self.dreptunghi=pygame.Rect(left, top, w, h)
+
+        self.dreptunghiText=self.textRandat.get_rect(center=self.dreptunghi.center)
+        self.valoare=valoare
+
+    def selecteaza(self,sel):
+        self.selectat=sel
+        self.deseneaza()
+    def selecteazaDupacoord(self,coord):
+        if self.dreptunghi.collidepoint(coord):
+            self.selecteaza(True)
+            return True
+        return False
+
+    def updateDreptunghi(self):
+        self.dreptunghi.left=self.left
+        self.dreptunghi.top=self.top
+        self.dreptunghiText=self.textRandat.get_rect(center=self.dreptunghi.center)
+
+    def deseneaza(self):
+        culoareF= self.culoareFundalSel if self.selectat else self.culoareFundal
+        pygame.draw.rect(self.display, culoareF, self.dreptunghi)
+        self.display.blit(self.textRandat ,self.dreptunghiText)
+
+class GrupButoane:
+    def __init__(self, listaButoane=[], indiceSelectat=0, spatiuButoane=10,left=0, top=0):
+        self.listaButoane=listaButoane
+        self.indiceSelectat=indiceSelectat
+        self.listaButoane[self.indiceSelectat].selectat=True
+        self.top=top
+        self.left=left
+        leftCurent=self.left
+        for b in self.listaButoane:
+            b.top=self.top
+            b.left=leftCurent
+            b.updateDreptunghi()
+            leftCurent+=(spatiuButoane+b.w)
+
+    def selecteazaDupacoord(self,coord):
+        for ib,b in enumerate(self.listaButoane):
+            if b.selecteazaDupacoord(coord):
+                self.listaButoane[self.indiceSelectat].selecteaza(False)
+                self.indiceSelectat=ib
+                return True
+        return False
+
+    def deseneaza(self):
+        #atentie, nu face wrap
+        for b in self.listaButoane:
+            b.deseneaza()
+
+    def getValoare(self):
+        return self.listaButoane[self.indiceSelectat].valoare
 
 
-def afis_daca_final(stare_curenta):
-    final = stare_curenta.tabla_joc.final(stare_curenta.j_curent)  # metoda final() returneaza "remiza" sau castigatorul ("x" sau "0") sau False daca nu e stare finala
+############# ecran initial ########################
+def deseneaza_alegeri(display, tabla_curenta):
+    btn_alg = GrupButoane(
+        top=30,
+        left=30,
+        listaButoane=[
+            Buton(display=display, w=80, h=30, text="minimax", valoare="minimax"),
+            Buton(display=display, w=80, h=30, text="alphabeta", valoare="alphabeta")
+            ],
+        indiceSelectat=1)
+    btn_juc = GrupButoane(
+        top=100,
+        left=30,
+        listaButoane=[
+            Buton(display=display, w=35, h=30, text="x", valoare="x"),
+            Buton(display=display, w=35, h=30, text="zero", valoare="0")
+            ],
+        indiceSelectat=0)
+    btn_nivel = GrupButoane(
+        top=170,
+        left=30,
+        listaButoane=[
+            Buton(display=display, w=80, h=30, text="incepator", valoare="2"),
+            Buton(display=display, w=80, h=30, text="mediu", valoare="3"),
+            Buton(display=display, w=80, h=30, text="avansat", valoare="4")
+        ],
+        indiceSelectat=0)
+    ok = Buton(display=display, top=270, left=30, w=40, h=30, text="ok", culoareFundal=(155,0,55))
+    btn_alg.deseneaza()
+    btn_juc.deseneaza()
+    btn_nivel.deseneaza()
+    ok.deseneaza()
+    while True:
+        for ev in pygame.event.get():
+            if ev.type== pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif ev.type == pygame.MOUSEBUTTONDOWN:
+                pos = pygame.mouse.get_pos()
+                if not btn_alg.selecteazaDupacoord(pos):
+                    if not btn_juc.selecteazaDupacoord(pos):
+                        if not btn_nivel.selecteazaDupacoord(pos):
+                            if ok.selecteazaDupacoord(pos):
+                                display.fill((0,0,0)) #stergere ecran
+                                tabla_curenta.deseneaza_grid()
+                                return btn_juc.getValoare(), btn_alg.getValoare(), int(btn_nivel.getValoare())
+        pygame.display.update()
+
+
+def afis_daca_final(stare_curenta, nr_mutari_calculator, nr_mutari_jucator, timpi, noduri):
+    final = stare_curenta.tabla_joc.final(stare_curenta.j_curent)
+    # nu avem varianta de remiza deci vedem care este castigatorul
     if (final):
         if final == 'x':
             print("A castigat 0")
         else:
             print("A castigat x")
-        return True
 
+        print("Numarul de mutari ale utilizatorului: ", nr_mutari_jucator)
+        print("Numarul de mutari ale calculatorului: ", nr_mutari_calculator)
+        print("Timpul minim: ", min(timpi))
+        print("Timpul maxim: ", max(timpi))
+        print("Timpul mediu: ", round(sum(timpi)/len(timpi), 2))
+        print("Mediana: ", statistics.median(timpi))
+
+        print("Numar minim de noduri: ", min(noduri[:len(noduri)-1]))
+        print("Numar maxim de noduri: ", max(noduri))
+        print("Numar mediu de noduri: ", round(sum(noduri) / len(noduri), 2))
+        print("Mediana nodurilor: ", statistics.median(noduri))
+
+        return True
     return False
 
 
+
 def main():
+    '''
     # initializare algoritm
     raspuns_valid = False
 
-    # TO DO 1
+    # utilizatorul alege algoritmul dorit
     while not raspuns_valid:
         tip_algoritm = input("Algoritmul folosit? (raspundeti cu 1 sau 2)\n 1.Minimax\n 2.Alpha-beta\n ")
         if tip_algoritm in ['1', '2']:
             raspuns_valid = True
         else:
             print("Nu ati ales o varianta corecta.")
-    # initializare jucatori
+
+    # utilizatorul alege simbolul cu care vrea sa joace
     raspuns_valid = False
     while not raspuns_valid:
-        Joc.JMIN = input("Doriti sa jucati cu x sau cu 0? ").lower()
+        Joc.JMIN = input("Doriti sa jucati cu x sau cu 0?\n ").lower()
         if (Joc.JMIN in ['x', '0']):
             raspuns_valid = True
         else:
             print("Raspunsul trebuie sa fie x sau 0.")
-    Joc.JMAX = '0' if Joc.JMIN == 'x' else 'x'
-    # expresie= val_true if conditie else val_false  (conditie? val_true: val_false)
+
+
+    # utilizatorul alege nivelul de experienta pe care il are
     raspuns_valid = False
     while not raspuns_valid:
         adancime = input("Nivelul dvs? (raspundeti cu 1, 2 sau 3)\n 1.Incepator\n 2.Mediu\n 3.Avansat\n")
@@ -384,30 +585,54 @@ def main():
         else:
             print("Nu ati ales o varianta corecta.")
 
-    # initializare tabla
-    tabla_curenta = Joc();  # apelam constructorul
-    print("Tabla initiala")
-    print(str(tabla_curenta))
+    '''
+    nr_mutari_jucator = 0
+    nr_mutari_calculator = 0
 
-    # creare stare initiala
-    stare_curenta = Stare(tabla_curenta, 'x', ADANCIME_MAX)
-    print(stare_curenta)
-    #print("llll")
+    timpi_calculator = []
+    noduri_calculator = []
 
     pygame.init()
-    pygame.display.set_caption('Chomp!')
+    pygame.display.set_caption('Gherghina Roxana - Chomp!')
 
     ecran = pygame.display.set_mode(size=(706, 706))
     Joc.initializeaza(ecran)
 
-    de_mutat = False
+
+
+    # initializam tabla
+    tabla_curenta = Joc()
+    Joc.JMIN, tip_algoritm, ADANCIME_MAX = deseneaza_alegeri(ecran, tabla_curenta)
+
+    Joc.JMAX = '0' if Joc.JMIN == 'x' else 'x'
+    print(Joc.JMIN)
+    print(tip_algoritm)
+    print(ADANCIME_MAX)
+    print("Tabla initiala")
+    print(str(tabla_curenta))
+
+    # starea initiala
+    stare_curenta = Stare(tabla_curenta, 'x', ADANCIME_MAX)
+    print(stare_curenta)
+    #print("llll")
+
+
+
     tabla_curenta.deseneaza_grid()
+
+    # utilizatorul trebuie sa selecteze doua patratele (coltul stanga sus si coltul dreapta jos)
+    # care determina dreptunghiul pe care vrea sa-l selecteze
+    # astfel trebuie sa retinem doua miscari consecutive ale utilizatorului
     first_click = True
+    first_move_jucator = True
+
+    if Joc.JMIN == 'x':
+        print("Acum muta utilizatorul cu simbolul ", Joc.JMIN)
+        t_inainte = int(round(time.time() * 1000))
 
     while True:
         if (stare_curenta.j_curent == Joc.JMIN):
             # muta jucatorul utilizator
-
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -415,6 +640,7 @@ def main():
                     sys.exit()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if first_click:
+                        # a ales coltul stanga sus, retinem pozitia acestuia
                         print("click1")
                         pos = pygame.mouse.get_pos()
 
@@ -426,6 +652,7 @@ def main():
                         first_click = False
 
                     else:
+                        # a ales si coltul dreapta jos, retinem pozitia acestuia
                         print("click2")
                         pos2 = pygame.mouse.get_pos()
                         for np in range(len(Joc.celuleGrid)):
@@ -434,11 +661,47 @@ def main():
                                 linie_dr = np // 7
                                 coloana_dr = np % 7
 
+
+                        # stim pozitiile ambelor colturi
+                        # verificam daca dreptunghiul selectat este liber si indeplineste conditia de mutare valida
                         if (linie_st in range(Joc.NR_COLOANE) and coloana_st in range(
                                 Joc.NR_COLOANE) and linie_dr in range(Joc.NR_COLOANE) and coloana_dr in range(
                                 Joc.NR_COLOANE)):
-                            if verif_liber(stare_curenta.tabla_joc.matr, linie_st, coloana_st, linie_dr,
-                                           coloana_dr):  # stare_curenta.tabla_joc.matr[linie_st * Joc.NR_COLOANE + coloana_st] == Joc.GOL:
+                            if first_move_jucator:
+                                if (margine(linie_st) or margine(linie_dr) or margine(coloana_st) or margine(coloana_dr)) and verif_liber(stare_curenta.tabla_joc.matr, linie_st, coloana_st, linie_dr, coloana_dr):
+                                    copie = copy.deepcopy(stare_curenta.tabla_joc.matr)
+                                    for i in range(linie_st, linie_dr + 1):
+                                        for j in range(coloana_st, coloana_dr + 1):
+                                            copie[i * 7 + j] = Joc.JMIN
+
+                                    if connected(copie):
+                                        for i in range(linie_st, linie_dr + 1):
+                                            for j in range(coloana_st, coloana_dr + 1):
+                                                # stare_curenta.tabla_joc.matr[i * 7 + j] = Joc.JMIN
+
+                                                if stare_curenta.tabla_joc.matr[i * 7 + j] == Joc.JMIN:
+                                                    stare_curenta.tabla_joc.deseneaza_grid(i * 7 + j)
+                                                if stare_curenta.tabla_joc.matr[i * 7 + j] == Joc.GOL:
+                                                    stare_curenta.tabla_joc.matr[i * 7 + j] = Joc.JMIN
+
+                                        # afisam tabla de joc in urma mutarii utilizatorului
+                                        print("\nTabla dupa mutarea jucatorului")
+                                        print(str(stare_curenta))
+
+                                        stare_curenta.tabla_joc.deseneaza_grid()
+                                        # verificam daca starea curenta este finala
+                                        if (afis_daca_final(stare_curenta, nr_mutari_calculator, nr_mutari_jucator+1, timpi_calculator, noduri_calculator)):
+                                            break
+
+                                        # am facut o mutare, este randul celuilalt jucator
+                                        stare_curenta.j_curent = Joc.jucator_opus(stare_curenta.j_curent)
+
+                                    first_move_jucator = False
+
+                                first_click = True
+
+                            elif ((margine(linie_st) or margine(linie_dr) or margine(coloana_st) or margine(coloana_dr)) or verif_conectate(stare_curenta.tabla_joc.matr, linie_st, coloana_st, linie_dr, coloana_dr, stare_curenta.j_curent)) and verif_liber(stare_curenta.tabla_joc.matr, linie_st, coloana_st, linie_dr, coloana_dr):
+                                # facem o copie pentru a nu altera momentan tabla de joc
                                 copie = copy.deepcopy(stare_curenta.tabla_joc.matr)
                                 for i in range(linie_st, linie_dr + 1):
                                     for j in range(coloana_st, coloana_dr + 1):
@@ -454,28 +717,29 @@ def main():
                                             if stare_curenta.tabla_joc.matr[i*7+j] == Joc.GOL:
                                                 stare_curenta.tabla_joc.matr[i * 7 + j] = Joc.JMIN
 
-                                    # afisarea starii jocului in urma mutarii utilizatorului
-
-
+                                    # afisam tabla de joc in urma mutarii utilizatorului
                                     print("\nTabla dupa mutarea jucatorului")
                                     print(str(stare_curenta))
 
                                     stare_curenta.tabla_joc.deseneaza_grid()
-                                    # testez daca jocul a ajuns intr-o stare finala
-                                    # si afisez un mesaj corespunzator in caz ca da
-                                    if (afis_daca_final(stare_curenta)):
+                                    # verificam daca starea curenta este finala
+                                    if (afis_daca_final(stare_curenta, nr_mutari_calculator, nr_mutari_jucator+1, timpi_calculator, noduri_calculator)):
                                         break
 
-                                    # S-a realizat o mutare. Schimb jucatorul cu cel opus
+                                    # am facut o mutare, este randul celuilalt jucator
                                     stare_curenta.j_curent = Joc.jucator_opus(stare_curenta.j_curent)
 
-
                                 first_click = True
+
+                            t_dupa = int(round(time.time() * 1000))
+                            print("Utilizatorul a \"gandit\" timp de " + str(t_dupa - t_inainte) + " milisecunde.")
+                            nr_mutari_jucator += 1
+                            first_click = True
 
 
 
             '''
-                        # TO DO 4
+                       COD PENTRU AFISARE DOAR IN CONSOLA
                         print("Acum muta utilizatorul cu simbolul", stare_curenta.j_curent)
                         raspuns_valid = False
                         while not raspuns_valid:
@@ -504,28 +768,13 @@ def main():
                             except ValueError:
                                 print("Linia si coloana trebuie sa fie numere intregi")
             
-                        # dupa iesirea din while sigur am valide atat linia cat si coloana
-                        # deci pot plasa simbolul pe "tabla de joc"
-                        #stare_curenta.tabla_joc.matr[linie * Joc.NR_COLOANE + coloana] = Joc.JMIN
-                        #y = int(coloana % 5)
-                        #for ii in range(linie * Joc.NR_COLOANE + coloana, 25, 5):
-                            #for j in range(0, 5 - y):
-                                # print(j)
-                                #if stare_curenta.tabla_joc.matr[ii + j] == Joc.GOL:
-                                    #stare_curenta.tabla_joc.matr[ii + j] = Joc.JMIN
-            
                         for i in range(linie_st, linie_dr + 1):
                             for j in range(coloana_st, coloana_dr + 1):
                                 stare_curenta.tabla_joc.matr[i*7 + j] = Joc.JMIN
             
-            
-            
-                        # afisarea starii jocului in urma mutarii utilizatorului
                         print("\nTabla dupa mutarea jucatorului")
                         print(str(stare_curenta))
-                        # TO DO 8a
-                        # testez daca jocul a ajuns intr-o stare finala
-                        # si afisez un mesaj corespunzator in caz ca da
+                    
                         if (afis_daca_final(stare_curenta)):
                             break
             '''
@@ -534,172 +783,53 @@ def main():
         else:  # jucatorul e JMAX (calculatorul)
             # Mutare calculator
 
+
             print("Acum muta calculatorul cu simbolul", stare_curenta.j_curent)
-            # preiau timpul in milisecunde de dinainte de mutare
+            # retinem momentul de start pentru afisarea timpului de gandire al calculatorului
             t_inainte = int(round(time.time() * 1000))
 
-            # stare actualizata e starea mea curenta in care am setat stare_aleasa (mutarea urmatoare)
+            # alegem algoritmul in functie de inputul utilizatorului
             if tip_algoritm == '1':
                 stare_actualizata = min_max(stare_curenta)
-            else:  # tip_algoritm==2
-                stare_actualizata = alpha_beta(-300, 300, stare_curenta)
+            else:
+                stare_actualizata, nr_noduri = alpha_beta(-300, 300, stare_curenta, 0)
+                noduri_calculator.append(nr_noduri)
+
+
 
             stare_curenta.tabla_joc = stare_actualizata.stare_aleasa.tabla_joc  # aici se face de fapt mutarea !!!
+
+
             print("Tabla dupa mutarea calculatorului")
             print(str(stare_curenta))
 
             stare_curenta.tabla_joc.deseneaza_grid()
-            # preiau timpul in milisecunde de dupa mutare
+            # retinem momentul de stop pentru afisarea timpului de gandire al calculatorului
             t_dupa = int(round(time.time() * 1000))
             print("Calculatorul a \"gandit\" timp de " + str(t_dupa - t_inainte) + " milisecunde.")
-            # TO DO 8b
-            if (afis_daca_final(stare_curenta)):
+            timpi_calculator.append(t_dupa - t_inainte)
+
+            if (afis_daca_final(stare_curenta, nr_mutari_calculator+1, nr_mutari_jucator, timpi_calculator, noduri_calculator)):
                 break
 
-            # S-a realizat o mutare.  jucatorul cu cel opus
+            # am facut o mutare, este randul celuilalt jucator
             stare_curenta.j_curent = Joc.jucator_opus(stare_curenta.j_curent)
+            print("Acum muta utilizatorul cu simbolul ", stare_curenta.j_curent)
+            t_inainte = int(round(time.time() * 1000))
+            nr_mutari_calculator += 1
+
+
 
 
 if __name__ == "__main__":
+    t_inainte = int(round(time.time() * 1000))
     main()
+    t_dupa = int(round(time.time() * 1000))
+    print("Jocul a durat " + str(t_dupa - t_inainte) + " milisecunde.")
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-#stare = Stare(Joc(['x', 'x', 'x', 'x', '*', 'x', 'x','0', '*', '0', '0', '0', 'x', 'x','#', '#', '#', '#', '#', 'x', 'x','#', '0', '#', '#', '#', '*', 'x','x', 'x', 'x', 'x', 'x', 'x', 'x','x', 'x', '*', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x']), '0', 3)
-#print(stare.mutari())
-
-'''
-print(check(['x', 'x', 'x', 'x', '*', '0', 'x',
-'x', '*', '#', '#', '#', '#', 'x',
-'x', '#', '0', '0', '#', 'x', 'x',
-'x', '#', '0', '#', '#', '*', 'x',
-'x', '#', '#', 'x', 'x', 'x', 'x',
-'x', '#', '*', 'x', 'x', 'x', 'x',
-'x', 'x', 'x', 'x', 'x', 'x', 'x'], 0, 3, 0, 6))
-print(check(['x', 'x', 'x', 'x', '*', '0', 'x',
-'x', '*', '#', '#', '#', '#', 'x',
-'x', '#', '0', '0', '#', 'x', 'x',
-'x', '#', '0', '#', '#', '*', 'x',
-'x', '#', '#', 'x', 'x', 'x', 'x',
-'x', '#', '*', 'x', 'x', 'x', 'x',
-'x', 'x', 'x', 'x', 'x', 'x', 'x'], 3, 6, 0, 6))
-print(pot_comunica_sup_inf(['x', 'x', 'x', 'x', '*', '0', 'x',
-'x', '*', '#', '#', '#', '#', 'x',
-'x', '#', '0', '0', '#', 'x', 'x',
-'x', '#', '0', '#', '#', '*', 'x',
-'x', '#', '#', 'x', 'x', 'x', 'x',
-'x', '#', '*', 'x', 'x', 'x', 'x',
-'x', 'x', 'x', 'x', 'x', 'x', 'x'], 3, 3))
-print(pot_comunica_st_dr(['x', 'x', 'x', 'x', '*', '0', 'x',
-'x', '*', '#', '#', '#', '#', 'x',
-'x', '#', '0', '0', '#', 'x', 'x',
-'x', '#', '0', '#', '#', '*', 'x',
-'x', '#', '#', 'x', 'x', 'x', 'x',
-'x', '#', '*', 'x', 'x', 'x', 'x',
-'x', 'x', 'x', 'x', 'x', 'x', 'x'], 2, 2))
-print(connected(['x', 'x', 'x', 'x', '*', '0', 'x',
-                 'x', '*', '0', '#', '#', '#', '#',
-                 '#', '#', '0', '0', '#', 'x', 'x',
-                 'x', '#', '#', '#', '#', '*', 'x',
-                 'x', '0', '0', 'x', 'x', 'x', 'x',
-                 'x', '0', '*', 'x', 'x', 'x', 'x',
-                 'x', 'x', 'x', 'x', 'x', 'x', 'x']))
-'''
-#print(connected(['#', '#', '#', '#', '*', '0', '0', '#', '*', '0', '0', '0', '0', '0', '#', '#', '0', '0', '0', '0', '0', '#', '#', '#', '#', '#', '*', '#', '#', '#', '#', 'x', 'x', 'x', 'x', '#', '#', '*', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x']))
-
-#if not pot_comunica_sup_inf(lista, linie_colt_st_sus, linie_colt_dr_jos):
-
-#if not check(lista, 0, linie_colt_dr_jos, 0, 6) and not check(lista, linie_colt_st_sus, 6, 0, 6):
-
-"""
-here libera
-['x', 'x', 'x', 'x', '*', '0', 'x', 
-'x', '*', '#', '#', '#', '#', 'x', 
-'x', '#', '0', '0', '#', 'x', 'x', 
-'x', '#', '0', '#', '#', '*', 'x', 
-'x', '#', '#', 'x', 'x', 'x', 'x', 
-'x', '#', '*', 'x', 'x', 'x', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x']
-here libera
-['x', 'x', 'x', 'x', '*', 'x', 'x', 
-'0', '*', '0', '0', '0', 'x', 'x', 
-'#', '0', '#', '#', '#', 'x', 'x', 
-'#', '0', '#', '#', '#', '*', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x', 
-'x', 'x', '*', 'x', 'x', 'x', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x']
-here libera
-['x', 'x', 'x', 'x', '*', 'x', 'x', 
-'0', '*', '0', '0', '0', 'x', 'x', 
-'#', '#', '0', '#', '#', 'x', 'x', 
-'#', '0', '#', '#', '#', '*', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x', 
-'x', 'x', '*', 'x', 'x', 'x', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x']
-here libera
-['x', 'x', 'x', 'x', '*', 'x', 'x', 
-'0', '*', '0', '0', '0', 'x', 'x', 
-'#', '#', '#', '0', '#', 'x', 'x', 
-'#', '0', '#', '#', '#', '*', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x', 
-'x', 'x', '*', 'x', 'x', 'x', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x']
-here libera
-['x', 'x', 'x', 'x', '*', 'x', 'x', 
-'0', '*', '0', '0', '0', 'x', 'x', 
-'#', '#', '#', '#', '0', 'x', 'x', 
-'#', '0', '#', '#', '#', '*', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x', 
-'x', 'x', '*', 'x', 'x', 'x', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x']
-here libera
-['x', 'x', 'x', 'x', '*', 'x', 'x', 
-'0', '*', '0', '0', '0', 'x', 'x', 
-'#', '#', '#', '#', '#', 'x', 'x', 
-'0', '0', '#', '#', '#', '*', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x', 
-'x', 'x', '*', 'x', 'x', 'x', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x']
-here libera
-['x', 'x', 'x', 'x', '*', 'x', 'x', 
-'0', '*', '0', '0', '0', 'x', 'x',
-'#', '#', '#', '#', '#', 'x', 'x',
-'#', '0', '0', '#', '#', '*', 'x',
-'x', 'x', 'x', 'x', 'x', 'x', 'x',
-'x', 'x', '*', 'x', 'x', 'x', 'x',
-'x', 'x', 'x', 'x', 'x', 'x', 'x']
-here libera
-['x', 'x', 'x', 'x', '*', 'x', 'x',
-'0', '*', '0', '0', '0', 'x', 'x',
-'#', '#', '#', '#', '#', 'x', 'x',
-'#', '0', '#', '0', '#', '*', 'x',
-'x', 'x', 'x', 'x', 'x', 'x', 'x',
-'x', 'x', '*', 'x', 'x', 'x', 'x',
-'x', 'x', 'x', 'x', 'x', 'x', 'x']
-here libera
-['x', 'x', 'x', 'x', '*', 'x', 'x',
-'0', '*', '0', '0', '0', 'x', 'x',
-'#', '#', '#', '#', '#', 'x', 'x',
-'#', '0', '#', '#', '0', '*', 'x',
-'x', 'x', 'x', 'x', 'x', 'x', 'x', 
-'x', 'x', '*', 'x', 'x', 'x', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x']
-['x', 'x', 'x', 'x', '*', 'x', 'x', 
-'0', '*', '0', '0', '0', 'x', 'x', 
-'#', '#', '#', '#', '#', 'x', 'x', 
-'#', '0', '#', '#', '#', '*', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x', 
-'x', 'x', '*', 'x', 'x', 'x', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x']
-['x', 'x', 'x', 'x', '*', 'x', 'x', 
-'0', '*', '0', '0', '0', 'x', 'x', 
-'#', '#', '#', '#', '#', 'x', 'x', 
-'#', '0', '#', '#', '#', '*', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x', 
-'x', 'x', '*', 'x', 'x', 'x', 'x', 
-'x', 'x', 'x', 'x', 'x', 'x', 'x']
-"""
-
 
