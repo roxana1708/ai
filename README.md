@@ -1,4 +1,4 @@
-AI Tema 1 - Prob. Lupi, Capre, Verze - rezolvare3.py
+## AI Tema 1 - Prob. Lupi, Capre, Verze - rezolvare3.py
 
 Problema se bazeaza pe jocul cunoscut cu taranul, lupul, capra si varza
 Taranul vrea sa mute animalele si verzele de pe malul de est pe malul de vest. Presupuneam ca taranul nostru si-a dezvoltat afacerea, si de data asta a cumparat L lupi, C capre si V verze. Nu mai are doar o biata barca, ci un vaporas cu 2 compartimente (A si B) in care incap cate K1 si respectiv K2 elemente.
@@ -9,7 +9,7 @@ Starea finala e atinsa cand nu mai sunt animale pe malul initial si in plus pe m
 
 
 
-AI Tema 2 - Jocul Chomp - rezolvare_v2.py
+## AI Tema 2 - Jocul Chomp - rezolvare_v2.py
 
 Sunt doi jucatori (in imagini notati cu rosu si albastru). Jocul foloseste o grila dreptunghiulara de n randuri si m coloane. Grila reprezinta o bucata de ciocolata (impartita in patratele din care cateva sunt otravite) din care doi jucatori flamanzi rup bucati dreptunghiulare. Numarul de randuri si de coloane va fi dat in constructorul jocului (puteti sa le hardcodati sau sa le cititi dintr-un fisier de setari). Jocul este bazat pe ture.
 La fiecare pas un jucator rupe o bucata dreptunghiulara astfel incat sa nu lase nicio patratica in aer (neconectata), dar nici sa nu ia vreo bucatica otravita.
