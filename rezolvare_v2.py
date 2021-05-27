@@ -98,9 +98,6 @@ def connected(lista):
 
 
 class Joc:
-    """
-    Clasa care defineste jocul. Se va schimba de la un joc la altul.
-    """
     NR_COLOANE = 7
     JMIN = None
     JMAX = None
@@ -256,6 +253,7 @@ class Joc:
         else:
             return -self.matr.count(self.__class__.JMIN)
 
+    # estimare scor in functie de paritatea patratelelor ramase
     def estimeaza_scor_3(self, j_curent):
         t_final = self.final(j_curent)
         # daca suntem intr-o stare finala intoarcem o valoare in functie de jucatorul castigator
@@ -345,18 +343,18 @@ def min_max(stare):
     mutariCuEstimare = [min_max(x) for x in stare.mutari_posibile]
 
     if stare.j_curent == Joc.JMAX:
-        stare.stare_aleasa = max(mutariCuEstimare, key=lambda x: x.estimare)  # def f(x): return x.estimare -----> key=f
+        stare.stare_aleasa = max(mutariCuEstimare, key=lambda x: x.estimare)
     else:
         stare.stare_aleasa = min(mutariCuEstimare, key=lambda x: x.estimare)
 
     stare.estimare = stare.stare_aleasa.estimare
-    #print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+
     return stare
 
 
 
 def alpha_beta(alpha, beta, stare, nr_noduri):
-    print(nr_noduri)
+    #print(nr_noduri)
     if stare.adancime == 0 or stare.tabla_joc.final(stare.j_curent):
         stare.estimare = stare.tabla_joc.estimeaza_scor_3(stare.j_curent) #stare.adancime
         return stare, nr_noduri
@@ -401,7 +399,6 @@ def alpha_beta(alpha, beta, stare, nr_noduri):
 
     if stare.stare_aleasa == None:
         print("A castigat ", Joc.JMIN)
-        return
     else:
         stare.estimare = stare.stare_aleasa.estimare
         return stare, nr_noduri
